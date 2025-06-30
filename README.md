@@ -1,10 +1,10 @@
-# 📊 Proyecto: Dashboard de Rendimiento Académico
+# Exámen 3 Página de Rendimiento Académico con Spring-Boot
 
-Este proyecto consiste en el diseño e implementación de un Data Warehouse (DW) orientado al análisis del rendimiento académico de estudiantes universitarios, complementado con una aplicación web desarrollada en Spring Boot (backend) y HTML + JavaScript (frontend), y desplegada completamente usando Docker.
+Consiste en el diseño e implementación de un Data Warehouse (DW) orientado al análisis del rendimiento académico de estudiantes y profesores de una universidad, complementado con una aplicación web desarrollada en Spring Boot (backend) y HTML + JavaScript (frontend), y desplegada usando Docker.
 
 ---
 
-## ✅ FASE 1: Propuesta del Caso de Uso
+## FASE 1: Propuesta del Caso de Uso
 
 ### 1. Identificar un Caso de Uso
 
@@ -42,32 +42,67 @@ Este proyecto consiste en el diseño e implementación de un Data Warehouse (DW)
 
 ---
 
-## ✅ FASE 2: Diseño y Construcción del Data Warehouse
+## FASE 2: Diseño y Construcción del Data Warehouse
 
 ### Modelo Estrella
 
 - Hecho: `calificacion`
 - Dimensiones: `estudiante`, `materia`, `profesor`, `grupo`, `tiempo`
 
-![Modelo Estrella](URL_AQUI_MODELO_ESTRELLA.png)
+![image](https://github.com/user-attachments/assets/48ac0e0e-b1b4-4827-907f-d967458603df)
+
 
 ### Esquema SQL (resumen)
 
 ```sql
-CREATE TABLE calificacion (
-  id SERIAL PRIMARY KEY,
-  estudiante_id INT REFERENCES estudiante(id),
-  materia_id INT REFERENCES materia(id),
-  profesor_id INT REFERENCES profesor(id),
-  grupo_id INT REFERENCES grupo(id),
-  tiempo_id INT REFERENCES tiempo(id),
-  calificacion NUMERIC(4,2)
+-- Dimensiones
+CREATE TABLE IF NOT EXISTS estudiante (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100),
+    genero VARCHAR(10),
+    carrera VARCHAR(100)
 );
+
+CREATE TABLE IF NOT EXISTS materia (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100),
+    creditos INT
+);
+
+CREATE TABLE IF NOT EXISTS profesor (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100),
+    departamento VARCHAR(100)
+);
+
+CREATE TABLE IF NOT EXISTS grupo (
+    id SERIAL PRIMARY KEY,
+    grupo VARCHAR(10),
+    semestre VARCHAR(10)
+);
+
+CREATE TABLE IF NOT EXISTS tiempo (
+    id SERIAL PRIMARY KEY,
+    anio INT,
+    semestre VARCHAR(10)
+);
+
+-- Hechos
+CREATE TABLE IF NOT EXISTS calificacion (
+    id SERIAL PRIMARY KEY,
+    estudiante_id INT REFERENCES estudiante(id),
+    materia_id INT REFERENCES materia(id),
+    profesor_id INT REFERENCES profesor(id),
+    grupo_id INT REFERENCES grupo(id),
+    tiempo_id INT REFERENCES tiempo(id),
+    calificacion NUMERIC(4,2)
+);
+
 ```
 
 ---
 
-## ✅ FASE 3: Desarrollo de la Aplicación
+## FASE 3: Desarrollo de la Aplicación
 
 ### Backend - Spring Boot
 
@@ -98,11 +133,12 @@ Características:
 - Formulario para cargar calificaciones nuevas
 - Formulario para editar profesores
 
-![Interfaz Web](URL_AQUI_INTERFAZ_HTML.png)
+![image](https://github.com/user-attachments/assets/ca359755-52c1-475d-9509-963c35d6eb41)
+
 
 ---
 
-## ✅ FASE 4: Despliegue con Docker
+## FASE 4: Despliegue con Docker
 
 ### Estructura del Proyecto
 
@@ -122,24 +158,48 @@ proyecto_dw_completo/
 ### docker-compose.yml (resumen)
 
 ```yaml
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15
-    ...
+    container_name: dw_postgres
+    environment:
+      POSTGRES_DB: dw_escuela
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
     volumes:
+      - pgdata:/var/lib/postgresql/data
       - ./database/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - ./database/02-populate.sql:/docker-entrypoint-initdb.d/02-populate.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d dw_escuela"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
-    ports: ["8000:8080"]
+    container_name: dw_backend
+    ports:
+      - "8000:8080"
     depends_on:
       postgres:
         condition: service_healthy
 
   frontend:
     build: ./frontend
-    ports: ["3000:80"]
+    container_name: dw_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+
 ```
 
 ### Comandos de despliegue
@@ -155,17 +215,3 @@ Accede a la aplicación:
 - Frontend Web: [http://localhost:3000](http://localhost:3000)
 
 ---
-
-## 📌 Estado Final del Proyecto
-
-✔ Modelo Estrella implementado  
-✔ Backend funcional con endpoints analíticos  
-✔ Frontend con visualización y formularios  
-✔ Despliegue automatizado con Docker  
-
----
-
-## 📝 Créditos
-
-Proyecto realizado como parte del curso de Ingeniería de Software — ESCOM IPN  
-Autor: [Tu nombre aquí]
