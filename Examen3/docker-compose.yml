@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: dw_postgres
+    environment:
+      POSTGRES_DB: dw_escuela
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/02-populate.sql:/docker-entrypoint-initdb.d/02-populate.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d dw_escuela"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: dw_backend
+    ports:
+      - "8000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: dw_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

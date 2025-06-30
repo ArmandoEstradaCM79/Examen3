@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Académico</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+    h2, h3 {
+      color: #2c3e50;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    textarea {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    input, button {
+      margin: 5px 0;
+      padding: 6px;
+      width: 100%;
+    }
+    form {
+      max-width: 500px;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📊 Dashboard Académico</h2>
+
+  <h3>📚 Promedio por Materia</h3>
+  <ul id="materia-lista"></ul>
+
+  <h3>👥 Rendimiento por Grupo</h3>
+  <ul id="grupo-lista"></ul>
+
+  <h3>👨‍🏫 Rendimiento por Profesor</h3>
+  <ul id="profesor-lista"></ul>
+
+  <hr>
+
+  <h3>📥 Cargar Nuevos Datos</h3>
+  <form id="form-carga">
+    <label for="datos-json">Pega aquí un JSON de calificaciones:</label><br>
+    <textarea id="datos-json" rows="10" placeholder='[{"calificacion": 9.5, "materia": {"id": 1}, ...}]'></textarea>
+    <button type="submit">Enviar Datos</button>
+  </form>
+
+  <h3>✏️ Editar Profesor</h3>
+  <form id="form-profesor">
+    <input type="number" id="prof-id" placeholder="ID del profesor" required>
+    <input type="text" id="prof-nombre" placeholder="Nuevo nombre del profesor">
+    <input type="text" id="prof-depto" placeholder="Nuevo departamento">
+    <button type="submit">Actualizar Profesor</button>
+  </form>
+
+  <script>
+    // Mostrar promedio por materia
+    fetch("http://localhost:8000/api/analytics/promedio-materias")
+      .then(res => res.json())
+      .then(data => {
+        const ul = document.getElementById("materia-lista");
+        data.forEach(([nombre, promedio]) => {
+          const li = document.createElement("li");
+          li.textContent = `${nombre}: ${Number(promedio).toFixed(2)}`;
+          ul.appendChild(li);
+        });
+      });
+
+    // Mostrar rendimiento por grupo
+    fetch("http://localhost:8000/api/analytics/rendimiento-grupos")
+      .then(res => res.json())
+      .then(data => {
+        const ul = document.getElementById("grupo-lista");
+        data.forEach(([grupo, semestre, promedio]) => {
+          const li = document.createElement("li");
+          li.textContent = `${grupo} (${semestre}): ${Number(promedio).toFixed(2)}`;
+          ul.appendChild(li);
+        });
+      });
+
+    // Mostrar rendimiento por profesor
+    fetch("http://localhost:8000/api/analytics/rendimiento-profesores")
+      .then(res => res.json())
+      .then(data => {
+        const ul = document.getElementById("profesor-lista");
+        data.forEach(([nombre, promedio]) => {
+          const li = document.createElement("li");
+          li.textContent = `${nombre}: ${Number(promedio).toFixed(2)}`;
+          ul.appendChild(li);
+        });
+      });
+
+    // Formulario para cargar datos
+    document.getElementById("form-carga").addEventListener("submit", e => {
+      e.preventDefault();
+      const json = document.getElementById("datos-json").value;
+      try {
+        const datos = JSON.parse(json);
+        fetch("http://localhost:8000/api/load-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(datos)
+        })
+        .then(res => res.text())
+        .then(msg => alert("✅ " + msg))
+        .catch(err => alert("❌ Error al enviar: " + err.message));
+      } catch (e) {
+        alert("❌ JSON inválido");
+      }
+    });
+
+    // Formulario para editar profesor
+    document.getElementById("form-profesor").addEventListener("submit", e => {
+      e.preventDefault();
+      const id = document.getElementById("prof-id").value;
+      const nombre = document.getElementById("prof-nombre").value;
+      const departamento = document.getElementById("prof-depto").value;
+
+      fetch(`http://localhost:8000/api/dimension/profesor/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, departamento })
+      })
+      .then(res => {
+        if (res.ok) alert("✅ Profesor actualizado");
+        else alert("❌ Error al actualizar");
+      });
+    });
+  </script>
+</body>
+</html>
